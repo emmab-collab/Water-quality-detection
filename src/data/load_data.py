@@ -146,6 +146,60 @@ def fill_missing(df):
     return df
 
 
+def detect_outliers_iqr(series):
+    """
+    Détecte les outliers avec la méthode IQR (Interquartile Range).
+
+    Méthode :
+    - Q1 = 25e percentile, Q3 = 75e percentile
+    - IQR = Q3 - Q1
+    - Outlier si : valeur < Q1 - 1.5×IQR  ou  valeur > Q3 + 1.5×IQR
+
+    Retourne un dict avec : total, pct, low, high, lower_bound, upper_bound
+    """
+    Q1 = series.quantile(0.25)
+    Q3 = series.quantile(0.75)
+    IQR = Q3 - Q1
+
+    lower_bound = Q1 - 1.5 * IQR
+    upper_bound = Q3 + 1.5 * IQR
+
+    outliers_low = (series < lower_bound).sum()
+    outliers_high = (series > upper_bound).sum()
+    total = outliers_low + outliers_high
+
+    return {
+        'total': total,
+        'pct': 100 * total / len(series),
+        'low': outliers_low,
+        'high': outliers_high,
+        'lower_bound': lower_bound,
+        'upper_bound': upper_bound
+    }
+
+
+def get_outliers_summary(df, columns):
+    """
+    Crée un résumé des outliers pour plusieurs colonnes.
+
+    Retourne un DataFrame avec le résumé des outliers par colonne.
+    """
+    results = []
+
+    for col in columns:
+        data = df[col].dropna()
+        result = detect_outliers_iqr(data)
+        results.append({
+            'Variable': col,
+            'Outliers': result['total'],
+            'Pourcentage': round(result['pct'], 1),
+            'Seuil_bas': round(result['lower_bound'], 2),
+            'Seuil_haut': round(result['upper_bound'], 2)
+        })
+
+    return pd.DataFrame(results).sort_values('Pourcentage', ascending=False)
+
+
 # =============================================================================
 # PRÉPARATION POUR LE MODÈLE
 # =============================================================================
