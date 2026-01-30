@@ -208,14 +208,14 @@ def get_X_y(df, features=None):
     """
     Sépare les features (X) et les targets (y).
 
-    Par défaut, utilise les mêmes features que le benchmark:
-    - swir22, NDMI, MNDWI, pet
+    Par défaut, utilise TOUTES les features Landsat + climat:
+    - nir, green, swir16, swir22, NDMI, MNDWI, pet
 
     Les targets sont toujours les 3 paramètres de qualité de l'eau.
     """
-    # Features par défaut (comme le benchmark)
+    # Features par défaut (améliorées par rapport au benchmark original)
     if features is None:
-        features = ['swir22', 'NDMI', 'MNDWI', 'pet']
+        features = ['nir', 'green', 'swir16', 'swir22', 'NDMI', 'MNDWI', 'pet']
 
     # Les 3 targets du challenge
     targets = ['Total Alkalinity', 'Electrical Conductance', 'Dissolved Reactive Phosphorus']

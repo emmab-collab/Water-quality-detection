@@ -70,21 +70,43 @@
 
 ## Variables Landsat (satellite)
 
+### Pourquoi utiliser des données satellite ?
+
+Les satellites comme Landsat capturent la lumière à **différentes longueurs d'onde** (pas seulement la lumière visible). Chaque matériau (eau, végétation, sol, minéraux) **réfléchit différemment** selon la longueur d'onde.
+
+C'est comme porter des "lunettes spéciales" qui révèlent des informations invisibles à l'œil nu.
+
+### Comment les matériaux réfléchissent la lumière
+
+| Longueur d'onde | Eau propre | Eau trouble | Algues |
+|-----------------|------------|-------------|--------|
+| Vert | Réfléchit | Réfléchit ++ | Réfléchit +++ |
+| NIR (infrarouge) | Absorbe | Absorbe | Réfléchit |
+| SWIR | Absorbe | Réfléchit + | Absorbe |
+
 ### Bandes spectrales
 
-| Colonne | Description |
-|---------|-------------|
-| `nir` | Proche infrarouge (Near Infrared) |
-| `green` | Bande verte |
-| `swir16` | Infrarouge ondes courtes 1 |
-| `swir22` | Infrarouge ondes courtes 2 |
+| Colonne | Description | Ce qu'elle détecte |
+|---------|-------------|-------------------|
+| `green` | Bande verte | Réflectance de l'eau, chlorophylle, algues |
+| `nir` | Proche infrarouge (Near Infrared) | Végétation (forte réflexion), eau (absorption) |
+| `swir16` | Infrarouge ondes courtes 1.6 µm | Humidité du sol et de l'eau |
+| `swir22` | Infrarouge ondes courtes 2.2 µm | Minéraux dissous, turbidité (eau trouble) |
 
 ### Indices spectraux
 
-| Colonne | Formule | Utilité |
-|---------|---------|---------|
-| `NDMI` | (nir - **swir16**) / (nir + **swir16**) | Détection de l'humidité |
-| `MNDWI` | (green - **swir16**) / (green + **swir16**) | Détection de l'eau |
+| Colonne | Formule | Ce qu'il détecte |
+|---------|---------|------------------|
+| `NDMI` | (nir - **swir16**) / (nir + **swir16**) | Humidité : valeur haute = humide |
+| `MNDWI` | (green - **swir16**) / (green + **swir16**) | Eau : valeur positive = présence d'eau |
+
+### Exemples d'interprétation
+
+| Type d'eau | MNDWI | SWIR22 | Explication |
+|------------|-------|--------|-------------|
+| Eau claire et propre | Élevé | Bas | L'eau absorbe l'infrarouge |
+| Eau trouble (sédiments) | Moyen | Élevé | Les particules réfléchissent le SWIR |
+| Eau avec algues | Variable | Bas | Les algues changent la réflectance verte |
 
 > **Note** : NDMI et MNDWI utilisent **swir16** (1.6 µm), pas swir22.
 > C'est pourquoi **swir22** est ajouté séparément dans le benchmark : il apporte une information complémentaire (sensible aux minéraux et à la turbidité).
@@ -99,10 +121,26 @@
 
 ---
 
-## Le benchmark utilise seulement 4 features
+## Nos features (améliorées par rapport au benchmark)
+
+### Benchmark original d'EY (4 features)
 
 ```python
-BENCHMARK_FEATURES = ['swir22', 'NDMI', 'MNDWI', 'pet']
+BENCHMARK_FEATURES_ORIGINAL = ['swir22', 'NDMI', 'MNDWI', 'pet']
 ```
 
-C'est un bon point de départ, mais on peut ajouter plus de features pour améliorer le modèle.
+### Nos features (7 features)
+
+```python
+BENCHMARK_FEATURES = ['nir', 'green', 'swir16', 'swir22', 'NDMI', 'MNDWI', 'pet']
+```
+
+### Pourquoi on a ajouté `nir`, `green` et `swir16` ?
+
+| Feature ajoutée | Pourquoi |
+|-----------------|----------|
+| `nir` | Détecte la végétation et les **algues** → lié au phosphore |
+| `green` | Détecte la **chlorophylle** des algues → lié au phosphore |
+| `swir16` | Déjà utilisé dans NDMI et MNDWI, mais apporte de l'info brute sur l'**humidité** |
+
+**Objectif** : Améliorer la prédiction du **phosphore** (difficile à prédire avec le benchmark original car ses sources humaines ne sont pas visibles). En ajoutant `nir` et `green`, on peut détecter les **algues** qui sont une conséquence du phosphore.

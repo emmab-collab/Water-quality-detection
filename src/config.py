@@ -41,14 +41,34 @@ TARGET_INFO = {
 # LES FEATURES (variables explicatives)
 # =============================================================================
 
-# Features du benchmark (celles utilisées par EY dans leur exemple)
-BENCHMARK_FEATURES = ['swir22', 'NDMI', 'MNDWI', 'pet']
+# Features du benchmark ORIGINAL (celles utilisées par EY dans leur exemple)
+# On les garde pour référence, mais on va utiliser plus de features
+BENCHMARK_FEATURES_ORIGINAL = ['swir22', 'NDMI', 'MNDWI', 'pet']
 
 # Toutes les features Landsat disponibles
 LANDSAT_FEATURES = ['nir', 'green', 'swir16', 'swir22', 'NDMI', 'MNDWI']
 
-# Features TerraClimate disponibles (pet dans le benchmark, mais il y en a d'autres)
+# Features TerraClimate disponibles
 TERRACLIMATE_FEATURES = ['pet']  # Potential Evapotranspiration
+
+# =============================================================================
+# NOS FEATURES (améliorées par rapport au benchmark)
+# =============================================================================
+
+# Toutes les features disponibles dans les données
+# On ajoute nir, green, swir16 qui peuvent détecter les algues (lié au phosphore)
+BENCHMARK_FEATURES = [
+    # Bandes spectrales brutes
+    'nir',      # Proche infrarouge - détecte végétation/algues
+    'green',    # Bande verte - chlorophylle/algues
+    'swir16',   # Infrarouge ondes courtes 1 - humidité
+    'swir22',   # Infrarouge ondes courtes 2 - minéraux/turbidité
+    # Indices spectraux
+    'NDMI',     # Indice d'humidité
+    'MNDWI',    # Indice de détection d'eau
+    # Climat
+    'pet',      # Évapotranspiration
+]
 
 # Colonnes de localisation (ne pas utiliser comme features!)
 LOCATION_COLS = ['Latitude', 'Longitude', 'Sample Date']
@@ -91,7 +111,8 @@ def show_config():
     print("CONFIGURATION DU PROJET")
     print("=" * 50)
     print(f"Targets: {TARGETS}")
-    print(f"Features benchmark: {BENCHMARK_FEATURES}")
+    print(f"Features benchmark original: {BENCHMARK_FEATURES_ORIGINAL}")
+    print(f"Nos features (améliorées): {BENCHMARK_FEATURES}")
     print(f"Random seed: {RANDOM_SEED}")
     print(f"N folds: {N_FOLDS}")
     print(f"Test size: {TEST_SIZE}")
