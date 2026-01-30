@@ -1,0 +1,20 @@
+# Dépendances pour le projet EY Water Quality
+# Installer avec: pip install -r requirements.txt
+
+# Manipulation de données
+pandas>=1.3.0
+numpy>=1.21.0
+
+# Machine Learning
+scikit-learn>=1.0.0
+
+# Visualisation
+matplotlib>=3.4.0
+seaborn>=0.11.0
+
+# Jupyter notebooks
+jupyter>=1.0.0
+
+# Optionnel - Pour aller plus loin
+# lightgbm>=3.3.0
+# xgboost>=1.5.0
