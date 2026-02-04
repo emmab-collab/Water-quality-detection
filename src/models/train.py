@@ -74,7 +74,8 @@ def train_models(
     X_train: np.ndarray,
     y_train: pd.DataFrame,
     n_estimators: int = 100,
-    max_depth: int = 10
+    max_depth: int = 10,
+    min_samples_leaf: int = 1
 ) -> Dict[str, RandomForestRegressor]:
     """
     Entraîne un Random Forest pour chaque target.
@@ -86,12 +87,12 @@ def train_models(
         model = RandomForestRegressor(
             n_estimators=n_estimators,
             max_depth=max_depth,
+            min_samples_leaf=min_samples_leaf,
             random_state=RANDOM_SEED,
             n_jobs=-1
         )
         model.fit(X_train, y_train[target])
         models[target] = model
-        print(f"Modèle entraîné: {target}")
     return models
 
 
@@ -166,3 +167,46 @@ def predict(
     for target in TARGETS:
         predictions[target] = models[target].predict(X)
     return pd.DataFrame(predictions)
+
+
+# =============================================================================
+# TUNING
+# =============================================================================
+
+def test_hyperparameters(
+    X_train: np.ndarray,
+    y_train: pd.DataFrame,
+    X_val: np.ndarray,
+    y_val: pd.DataFrame,
+    max_depths: list = [3, 5, 7, 10, 15],
+    min_samples_leafs: list = [1, 5, 10]
+) -> pd.DataFrame:
+    """
+    Teste différentes combinaisons d'hyperparamètres.
+
+    Retourne un DataFrame avec les résultats.
+    """
+    results = []
+
+    for depth in max_depths:
+        for min_leaf in min_samples_leafs:
+            models = train_models(X_train, y_train, max_depth=depth, min_samples_leaf=min_leaf)
+
+            train_res = evaluate(models, X_train, y_train)
+            val_res = evaluate(models, X_val, y_val)
+
+            for target in TARGETS:
+                train_r2 = train_res[target]['R2']
+                val_r2 = val_res[target]['R2']
+                gap = train_r2 - val_r2
+
+                results.append({
+                    'target': target,
+                    'max_depth': depth,
+                    'min_samples_leaf': min_leaf,
+                    'train_R2': round(train_r2, 3),
+                    'val_R2': round(val_r2, 3),
+                    'gap': round(gap, 3)
+                })
+
+    return pd.DataFrame(results)

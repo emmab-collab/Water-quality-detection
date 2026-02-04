@@ -7,4 +7,5 @@ from src.models.train import (
     print_results,
     get_feature_importance,
     predict,
+    test_hyperparameters,
 )
