@@ -23,32 +23,41 @@ from datetime import datetime
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 # =============================================================================
-# DOSSIER DES DONNÉES BRUTES (Snowflake)
-# =============================================================================
-
-# C'est là où sont les fichiers fournis par EY
-SNOWFLAKE_DIR = PROJECT_ROOT / "Snowflake Notebooks Package"
-
-# Les 3 fichiers de données d'entraînement
-WATER_QUALITY_FILE = SNOWFLAKE_DIR / "water_quality_training_dataset.csv"
-LANDSAT_FILE = SNOWFLAKE_DIR / "landsat_features_training.csv"
-TERRACLIMATE_FILE = SNOWFLAKE_DIR / "terraclimate_features_training.csv"
-
-# Le fichier de soumission (données de test)
-SUBMISSION_TEMPLATE = SNOWFLAKE_DIR / "submission_template.csv"
-
-# Les fichiers de features pour la validation (si générés)
-LANDSAT_VAL_FILE = SNOWFLAKE_DIR / "landsat_features_validation.csv"
-TERRACLIMATE_VAL_FILE = SNOWFLAKE_DIR / "terraclimate_features_validation.csv"
-
-# =============================================================================
-# DOSSIERS DU PROJET
+# FICHIERS DE DONNÉES
 # =============================================================================
 
 # Données
 DATA_DIR = PROJECT_ROOT / "data"
-RAW_DIR = DATA_DIR / "raw"              # Données brutes (copie de sécurité)
-PROCESSED_DIR = DATA_DIR / "processed"  # Données nettoyées/transformées
+RAW_DIR = DATA_DIR / "raw"              # Données brutes
+PROCESSED_DIR = DATA_DIR / "processed"  # Données traitées
+
+# --- TRAINING ---
+# Water quality (targets + coordonnées)
+WATER_QUALITY_FILE = RAW_DIR / "water_quality_training_dataset.csv"
+
+# Features Landsat (6 bandes + 4 indices : blue, green, red, nir, swir16, swir22, NDVI, NDWI, NDMI, MNDWI)
+LANDSAT_FILE = PROCESSED_DIR / "landsat_features_training_complete.csv"
+
+# Features TerraClimate (pet)
+TERRACLIMATE_FILE = PROCESSED_DIR / "terraclimate_features_training.csv"
+
+# --- SUBMISSION (TEST) ---
+# Template de soumission (coordonnées + dates)
+SUBMISSION_TEMPLATE = RAW_DIR / "submission_template.csv"
+
+# Features Landsat pour submission
+LANDSAT_SUBMISSION_FILE = PROCESSED_DIR / "landsat_features_validation_complete.csv"
+
+# Features TerraClimate pour submission
+TERRACLIMATE_SUBMISSION_FILE = PROCESSED_DIR / "terraclimate_features_validation.csv"
+
+# Alias pour rétrocompatibilité
+LANDSAT_VAL_FILE = LANDSAT_SUBMISSION_FILE
+TERRACLIMATE_VAL_FILE = TERRACLIMATE_SUBMISSION_FILE
+
+# =============================================================================
+# DOSSIERS DU PROJET
+# =============================================================================
 
 # Code source
 SRC_DIR = PROJECT_ROOT / "src"
@@ -142,10 +151,14 @@ def check_data_files():
     Utile pour s'assurer que tout est bien configuré.
     """
     files_to_check = [
-        ("Water Quality", WATER_QUALITY_FILE),
-        ("Landsat", LANDSAT_FILE),
-        ("TerraClimate", TERRACLIMATE_FILE),
+        # Training
+        ("Water Quality (training)", WATER_QUALITY_FILE),
+        ("Landsat (training)", LANDSAT_FILE),
+        ("TerraClimate (training)", TERRACLIMATE_FILE),
+        # Submission
         ("Submission Template", SUBMISSION_TEMPLATE),
+        ("Landsat (submission)", LANDSAT_SUBMISSION_FILE),
+        ("TerraClimate (submission)", TERRACLIMATE_SUBMISSION_FILE),
     ]
 
     print("Vérification des fichiers de données:")
@@ -179,11 +192,15 @@ def show_paths():
     print("=" * 60)
     print(f"Racine du projet : {PROJECT_ROOT}")
     print()
-    print("Données Snowflake:")
+    print("Données TRAINING:")
     print(f"  - Water Quality : {WATER_QUALITY_FILE}")
     print(f"  - Landsat       : {LANDSAT_FILE}")
     print(f"  - TerraClimate  : {TERRACLIMATE_FILE}")
-    print(f"  - Submission    : {SUBMISSION_TEMPLATE}")
+    print()
+    print("Données SUBMISSION:")
+    print(f"  - Template      : {SUBMISSION_TEMPLATE}")
+    print(f"  - Landsat       : {LANDSAT_SUBMISSION_FILE}")
+    print(f"  - TerraClimate  : {TERRACLIMATE_SUBMISSION_FILE}")
     print()
     print("Dossiers de sortie:")
     print(f"  - Modèles       : {MODELS_DIR}")

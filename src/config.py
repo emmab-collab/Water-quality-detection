@@ -45,8 +45,10 @@ TARGET_INFO = {
 # On les garde pour référence, mais on va utiliser plus de features
 BENCHMARK_FEATURES_ORIGINAL = ['swir22', 'NDMI', 'MNDWI', 'pet']
 
-# Toutes les features Landsat disponibles
-LANDSAT_FEATURES = ['nir', 'green', 'swir16', 'swir22', 'NDMI', 'MNDWI']
+# Toutes les features Landsat disponibles (6 bandes + 4 indices)
+LANDSAT_BANDS = ['blue', 'green', 'red', 'nir', 'swir16', 'swir22']
+LANDSAT_INDICES = ['NDVI', 'NDWI', 'NDMI', 'MNDWI']
+LANDSAT_FEATURES = LANDSAT_BANDS + LANDSAT_INDICES
 
 # Features TerraClimate disponibles
 TERRACLIMATE_FEATURES = ['pet']  # Potential Evapotranspiration
@@ -56,19 +58,25 @@ TERRACLIMATE_FEATURES = ['pet']  # Potential Evapotranspiration
 # =============================================================================
 
 # Toutes les features disponibles dans les données
-# On ajoute nir, green, swir16 qui peuvent détecter les algues (lié au phosphore)
-BENCHMARK_FEATURES = [
-    # Bandes spectrales brutes
-    'nir',      # Proche infrarouge - détecte végétation/algues
+ALL_FEATURES = [
+    # Bandes spectrales Landsat (6)
+    'blue',     # Bande bleue - pénètre l'eau profonde, turbidité
     'green',    # Bande verte - chlorophylle/algues
+    'red',      # Bande rouge - chlorophylle, végétation
+    'nir',      # Proche infrarouge - détecte végétation/algues
     'swir16',   # Infrarouge ondes courtes 1 - humidité
     'swir22',   # Infrarouge ondes courtes 2 - minéraux/turbidité
-    # Indices spectraux
-    'NDMI',     # Indice d'humidité
-    'MNDWI',    # Indice de détection d'eau
-    # Climat
-    'pet',      # Évapotranspiration
+    # Indices spectraux (4)
+    'NDVI',     # Indice de végétation
+    'NDWI',     # Indice d'eau (Green-NIR)
+    'NDMI',     # Indice d'humidité (NIR-SWIR)
+    'MNDWI',    # Indice de détection d'eau modifié (Green-SWIR)
+    # Climat (1)
+    'pet',      # Évapotranspiration potentielle
 ]
+
+# Alias pour rétrocompatibilité
+BENCHMARK_FEATURES = ALL_FEATURES
 
 # Colonnes de localisation (ne pas utiliser comme features!)
 LOCATION_COLS = ['Latitude', 'Longitude', 'Sample Date']

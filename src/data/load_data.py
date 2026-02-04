@@ -33,8 +33,11 @@ def load_landsat(filepath):
     """
     Charge les données satellite Landsat.
 
-    Contient les bandes spectrales (nir, green, swir16, swir22)
-    et les indices calculés (NDMI, MNDWI).
+    Contient les bandes spectrales :
+    - blue, green, red, nir, swir16, swir22
+
+    Et les indices calculés :
+    - NDVI, NDWI, NDMI, MNDWI
     """
     df = pd.read_csv(filepath)
 
@@ -43,11 +46,12 @@ def load_landsat(filepath):
         df['Sample Date'] = pd.to_datetime(df['Sample Date'], dayfirst=True, errors='coerce')
 
     # Convertir en nombres (parfois ce sont des strings)
-    for col in ['NDMI', 'MNDWI']:
+    indices = ['NDVI', 'NDWI', 'NDMI', 'MNDWI']
+    for col in indices:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors='coerce')
 
-    print(f"[OK] Landsat: {len(df)} lignes")
+    print(f"[OK] Landsat: {len(df)} lignes, {len(df.columns)} colonnes")
     return df
 
 
@@ -209,13 +213,22 @@ def get_X_y(df, features=None):
     Sépare les features (X) et les targets (y).
 
     Par défaut, utilise TOUTES les features Landsat + climat:
-    - nir, green, swir16, swir22, NDMI, MNDWI, pet
+    - Bandes spectrales : blue, green, red, nir, swir16, swir22
+    - Indices spectraux : NDVI, NDWI, NDMI, MNDWI
+    - Climat : pet
 
     Les targets sont toujours les 3 paramètres de qualité de l'eau.
     """
-    # Features par défaut (améliorées par rapport au benchmark original)
+    # Features par défaut (toutes les variables disponibles)
     if features is None:
-        features = ['nir', 'green', 'swir16', 'swir22', 'NDMI', 'MNDWI', 'pet']
+        features = [
+            # Bandes spectrales Landsat
+            'blue', 'green', 'red', 'nir', 'swir16', 'swir22',
+            # Indices spectraux
+            'NDVI', 'NDWI', 'NDMI', 'MNDWI',
+            # Climat
+            'pet'
+        ]
 
     # Les 3 targets du challenge
     targets = ['Total Alkalinity', 'Electrical Conductance', 'Dissolved Reactive Phosphorus']
@@ -242,7 +255,7 @@ def get_site_ids(df):
 
 
 # =============================================================================
-# FONCTION PRINCIPALE (TOUT-EN-UN)
+# FONCTIONS PRINCIPALES (TOUT-EN-UN)
 # =============================================================================
 
 def load_all(wq_path, landsat_path, terra_path, features=None, fill_na=False):
@@ -252,7 +265,7 @@ def load_all(wq_path, landsat_path, terra_path, features=None, fill_na=False):
     Paramètres:
     -----------
     wq_path : chemin vers water_quality_training_dataset.csv
-    landsat_path : chemin vers landsat_features_training.csv
+    landsat_path : chemin vers landsat_features_training_complete.csv
     terra_path : chemin vers terraclimate_features_training.csv
     features : liste des colonnes à utiliser (optionnel)
     fill_na : si True, remplit les valeurs manquantes avec la médiane (défaut: False)
@@ -267,9 +280,9 @@ def load_all(wq_path, landsat_path, terra_path, features=None, fill_na=False):
     Exemple:
     --------
     X, y, sites, df = load_all(
-        "chemin/water_quality_training_dataset.csv",
-        "chemin/landsat_features_training.csv",
-        "chemin/terraclimate_features_training.csv"
+        "data/raw/water_quality_training_dataset.csv",
+        "data/processed/landsat_features_training_complete.csv",
+        "data/processed/terraclimate_features_training.csv"
     )
     """
     print("="*50)
@@ -305,6 +318,76 @@ def load_all(wq_path, landsat_path, terra_path, features=None, fill_na=False):
     return X, y, site_ids, df
 
 
+def load_submission(submission_path, landsat_path, terra_path, features=None, fill_na=False):
+    """
+    Charge et prépare les données de submission (test) pour faire des prédictions.
+
+    Paramètres:
+    -----------
+    submission_path : chemin vers submission_template.csv
+    landsat_path : chemin vers landsat_features_submission.csv (ou validation_complete)
+    terra_path : chemin vers terraclimate_features_validation.csv
+    features : liste des colonnes à utiliser (optionnel)
+    fill_na : si True, remplit les valeurs manquantes avec la médiane (défaut: False)
+
+    Retourne:
+    ---------
+    X : les features pour la prédiction
+    df : le DataFrame complet
+
+    Exemple:
+    --------
+    X_sub, df_sub = load_submission(
+        "data/raw/submission_template.csv",
+        "data/processed/landsat_features_validation_complete.csv",
+        "data/processed/terraclimate_features_validation.csv"
+    )
+    """
+    print("="*50)
+    print("CHARGEMENT DES DONNÉES DE SUBMISSION")
+    print("="*50)
+
+    # 1. Charger le template de submission (coordonnées + dates)
+    submission = pd.read_csv(submission_path)
+    submission['Sample Date'] = pd.to_datetime(submission['Sample Date'], dayfirst=True, errors='coerce')
+    print(f"[OK] Submission template: {len(submission)} lignes")
+
+    # 2. Charger Landsat et TerraClimate
+    landsat = load_landsat(landsat_path)
+    terra = load_terraclimate(terra_path)
+
+    # 3. Fusionner
+    join_cols = ['Latitude', 'Longitude', 'Sample Date']
+    df = pd.merge(submission, landsat, on=join_cols, how='inner')
+    df = pd.merge(df, terra, on=join_cols, how='inner')
+    print(f"[OK] Données fusionnées: {len(df)} lignes, {len(df.columns)} colonnes")
+
+    # 4. Afficher les valeurs manquantes
+    print("\nValeurs manquantes:")
+    check_missing(df)
+
+    # 5. Remplir les valeurs manquantes seulement si demandé
+    if fill_na:
+        df = fill_missing(df)
+
+    # 6. Features par défaut
+    if features is None:
+        features = [
+            'blue', 'green', 'red', 'nir', 'swir16', 'swir22',
+            'NDVI', 'NDWI', 'NDMI', 'MNDWI',
+            'pet'
+        ]
+
+    X = df[features]
+    print(f"[OK] X: {X.shape[0]} lignes, {X.shape[1]} features")
+
+    print("\n" + "="*50)
+    print("PRÊT POUR LA PRÉDICTION!")
+    print("="*50)
+
+    return X, df
+
+
 # =============================================================================
 # TEST
 # =============================================================================
@@ -313,10 +396,18 @@ if __name__ == "__main__":
     # Ce code s'exécute seulement si tu lances ce fichier directement
     print("Pour utiliser ce module:")
     print("")
-    print("from src.data.load_data import load_all")
+    print("from src.data.load_data import load_all, load_submission")
     print("")
+    print("# Charger les données de TRAINING:")
     print('X, y, sites, df = load_all(')
-    print('    "Snowflake Notebooks Package/water_quality_training_dataset.csv",')
-    print('    "Snowflake Notebooks Package/landsat_features_training.csv",')
-    print('    "Snowflake Notebooks Package/terraclimate_features_training.csv"')
+    print('    "data/raw/water_quality_training_dataset.csv",')
+    print('    "data/processed/landsat_features_training_complete.csv",')
+    print('    "data/processed/terraclimate_features_training.csv"')
+    print(')')
+    print("")
+    print("# Charger les données de SUBMISSION:")
+    print('X_sub, df_sub = load_submission(')
+    print('    "data/raw/submission_template.csv",')
+    print('    "data/processed/landsat_features_validation_complete.csv",')
+    print('    "data/processed/terraclimate_features_validation.csv"')
     print(')')
