@@ -1,10 +1,6 @@
 # -*- coding: utf-8 -*-
-"""
-Module de visualisation (à développer).
-
-Graphiques utiles:
-- Distribution des targets
-- Corrélations features/targets
-- Carte des sites de mesure
-- Résidus du modèle
-"""
+from src.visualization.plots import (
+    plot_correlation,
+    plot_predictions,
+    plot_importance,
+)

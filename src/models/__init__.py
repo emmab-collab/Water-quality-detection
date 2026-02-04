@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
-"""
-Module de modélisation (à développer).
-
-Modèles à tester:
-- Random Forest (benchmark)
-- LightGBM
-- XGBoost
-"""
+from src.models.train import (
+    split_data,
+    normalize,
+    train_models,
+    evaluate,
+    print_results,
+    get_feature_importance,
+    predict,
+)

@@ -1,9 +1,19 @@
 # -*- coding: utf-8 -*-
-"""
-Module de feature engineering (à développer).
-
-Idées de features à créer:
-- Extraire le mois/saison de la date
-- Ajouter d'autres variables TerraClimate
-- Créer des ratios entre bandes Landsat
-"""
+from src.features.engineering import (
+    # Constantes
+    SATURATION_VALUE,
+    CREATED_FEATURES,
+    SEASON_ENCODED,
+    MODEL_FEATURES,
+    # Nettoyage
+    clean_training_data,
+    compute_medians,
+    impute_with_medians,
+    # Features
+    create_features,
+    encode_season,
+    select_model_features,
+    # Pipelines
+    prepare_training,
+    prepare_submission,
+)
