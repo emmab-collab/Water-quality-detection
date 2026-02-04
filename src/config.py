@@ -50,8 +50,19 @@ LANDSAT_BANDS = ['blue', 'green', 'red', 'nir', 'swir16', 'swir22']
 LANDSAT_INDICES = ['NDVI', 'NDWI', 'NDMI', 'MNDWI']
 LANDSAT_FEATURES = LANDSAT_BANDS + LANDSAT_INDICES
 
-# Features TerraClimate disponibles
-TERRACLIMATE_FEATURES = ['pet']  # Potential Evapotranspiration
+# Features TerraClimate disponibles (10 variables)
+TERRACLIMATE_FEATURES = [
+    'pet',   # Potential Evapotranspiration (évapotranspiration potentielle)
+    'aet',   # Actual Evapotranspiration (évapotranspiration réelle)
+    'ppt',   # Precipitation (précipitations)
+    'tmax',  # Maximum Temperature (température max)
+    'tmin',  # Minimum Temperature (température min)
+    'soil',  # Soil Moisture (humidité du sol)
+    'def',   # Climate Water Deficit (déficit hydrique = PET - AET)
+    'pdsi',  # Palmer Drought Severity Index (indice de sécheresse)
+    'vpd',   # Vapor Pressure Deficit (déficit de pression de vapeur)
+    'ws',    # Wind Speed (vitesse du vent)
+]
 
 # =============================================================================
 # NOS FEATURES (améliorées par rapport au benchmark)
@@ -71,8 +82,17 @@ ALL_FEATURES = [
     'NDWI',     # Indice d'eau (Green-NIR)
     'NDMI',     # Indice d'humidité (NIR-SWIR)
     'MNDWI',    # Indice de détection d'eau modifié (Green-SWIR)
-    # Climat (1)
+    # Climat TerraClimate (10)
     'pet',      # Évapotranspiration potentielle
+    'aet',      # Évapotranspiration réelle
+    'ppt',      # Précipitations
+    'tmax',     # Température max
+    'tmin',     # Température min
+    'soil',     # Humidité du sol
+    'def',      # Déficit hydrique climatique
+    'pdsi',     # Indice de sécheresse Palmer
+    'vpd',      # Déficit de pression de vapeur
+    'ws',       # Vitesse du vent
 ]
 
 # Alias pour rétrocompatibilité
