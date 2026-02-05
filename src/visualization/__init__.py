@@ -4,4 +4,5 @@ from src.visualization.plots import (
     plot_predictions,
     plot_importance,
     plot_learning_curves,
+    plot_hyperparameter_search,
 )

@@ -1,97 +1,199 @@
-# Prochaines Étapes
+# Checklist - Améliorer la Prédiction de Qualité de l'Eau
 
-## Fait
+## Situation actuelle
 
-| Étape | Détail |
-|-------|--------|
-| EDA | Exploration, valeurs manquantes, corrélations |
-| Extraction données | Landsat (6 bandes + 4 indices), TerraClimate (10 variables) |
-| Feature engineering | day_of_year, season, nir_green_ratio, swir_ratio |
-| One-hot encoding | season → 3 colonnes binaires |
-| Pipeline src/ | Fonctions réutilisables dans src/features et src/models |
-| Modèle baseline | Random Forest, split 60/20/20, learning curves |
+**R² max atteint : ~0.41** avec Random Forest sur 35 features (Landsat + TerraClimate + features créées)
 
-## À faire
+**Problème identifié** : Les données actuelles ne capturent pas assez le contexte hydrologique et spatial.
 
-### Priorité 1 : Améliorer le modèle actuel
+---
 
-| Tâche | Pourquoi |
-|-------|----------|
-| Analyser les learning curves | Vérifier si overfitting |
-| Tuner max_depth | Réduire si overfitting |
-| Tuner n_estimators | 100 → 200 ? |
-| Tester sans certaines features | Simplifier si performances similaires |
+## Phase 1 : Quick wins (données existantes)
 
-### Priorité 2 : Tester d'autres modèles
+### 1.1 ✅ Type de milieu (rivière vs plan d'eau)
+- [x] Utiliser HydroLAKES + HydroRIVERS (méthode scientifique)
+- [x] Notebook créé : `09_WATER_TYPE_CLASSIFICATION.ipynb`
+- [x] Classification effectuée avec buffer 200m
 
-| Modèle | Avantage |
-|--------|----------|
-| LightGBM | Plus rapide, souvent meilleur |
-| XGBoost | Robuste |
-| Ridge/Lasso | Simple, interprétable |
+**Résultat :**
+| Type | Nb points | % |
+|------|-----------|---|
+| river | 7392 | 79% |
+| unknown | 1900 | 20% |
+| lake | 27 | <1% |
 
-```python
-from lightgbm import LGBMRegressor
+**Fichiers créés :** `water_type_training.csv`, `water_type_validation.csv`
 
-model = LGBMRegressor(n_estimators=100, max_depth=10, random_state=42)
-model.fit(X_train, y_train)
-```
+### 1.2 ✅ Améliorer l'extraction Landsat (buffer + stats)
+- [x] Notebook V2 créé : `06_LANDSAT_DATA_EXTRACTION_V2.ipynb`
+- [x] Buffer de ~200m autour du point
+- [x] Calcul moyenne + écart-type pour chaque bande/indice
+- [x] **Exécuté**
 
-### Priorité 3 : Validation spatiale
+**Nouvelles features (20 au lieu de 10) :**
+- Bandes : `blue`, `blue_std`, `green`, `green_std`, etc.
+- Indices : `NDVI`, `NDVI_std`, `NDWI`, `NDWI_std`, etc.
 
-**Problème actuel** : Le split est aléatoire. Un même site peut être dans train ET test → fuite de données.
+### 1.3 ✅ Agrégations temporelles climat (TerraClimate)
+- [x] Notebook V2 créé : `05_TERRACLIMATE_DATA_EXTRACTION_V2.ipynb`
+- [x] Lags mensuels (lag1, lag2, lag3)
+- [x] Cumul 4 mois, moyenne 4 mois
+- [x] Anomalie saisonnière
+- [x] **Exécuté**
 
-**Solution** : GroupKFold par site.
+**Nouvelles features (34 au lieu de 10) :**
+- Variables avec temporel : `ppt`, `soil`, `def`, `vpd`
+- Suffixes : `_lag1`, `_lag2`, `_lag3`, `_sum4`, `_mean4`, `_anomaly`
 
-```python
-from sklearn.model_selection import GroupKFold
+---
 
-site_ids = df['Latitude'].astype(str) + '_' + df['Longitude'].astype(str)
-gkf = GroupKFold(n_splits=5)
+## Phase 2 : Nouvelles sources de données
 
-for train_idx, test_idx in gkf.split(X, y, groups=site_ids):
-    X_train, X_test = X.iloc[train_idx], X.iloc[test_idx]
-    # ...
-```
+### 2.1 ✅ ESA WorldCover (occupation du sol)
+- [x] Notebook créé : `08_ESA_WORLDCOVER_EXTRACTION.ipynb`
+- [x] **Exécuté**
+- [x] Extraire sur buffer 500m :
+  - [x] % agriculture (`lc_cropland`)
+  - [x] % zones urbaines (`lc_builtup`)
+  - [x] % zones naturelles (`lc_tree`, `lc_grassland`)
+  - [x] % zones humides (`lc_wetland`)
 
-### Priorité 4 : Améliorer le phosphore
+### 2.2 ✅ SoilGrids (propriétés du sol)
+- [x] Notebook créé : `10_SOILGRIDS_EXTRACTION.ipynb`
+- [x] **Exécuté** (via API REST ISRIC)
+- [x] Variables extraites :
+  - [x] pH du sol (`soil_ph`)
+  - [x] % argiles (`soil_clay`)
+  - [x] % sable (`soil_sand`)
+  - [x] Carbone organique (`soil_soc`)
+  - [x] CEC (`soil_cec`)
+  - [x] Azote total (`soil_nitrogen`)
 
-Le phosphore (DRP) est difficile à prédire. Idées :
+**Source** : API REST ISRIC (https://rest.isric.org)
 
-| Approche | Comment |
-|----------|---------|
-| Transformation log | `y['DRP'] = np.log1p(y['DRP'])` |
-| Classification | Prédire bas/moyen/élevé au lieu d'une valeur |
-| Features décalées | Utiliser satellite de J-7 (laisser le temps aux algues) |
+### 2.3 ✅ DEM (topographie simple)
+- [x] Notebook créé : `11_DEM_EXTRACTION.ipynb`
+- [x] **Exécuté**
+- [x] Variables extraites :
+  - [x] Altitude du point (`elevation`)
+  - [x] Pente locale (`slope`)
+  - [x] Orientation (`aspect`)
 
-### Priorité 5 : Soumission finale
+**Source** : Copernicus DEM GLO-30 sur Planetary Computer
 
-1. Réentraîner sur tout le training set (sans split)
-2. Appliquer le même pipeline au submission
-3. Générer les prédictions
-4. Sauvegarder au format demandé
+---
 
-```python
-# Réentraîner sur tout
-X_all = select_model_features(df_train)
-y_all = df_train[TARGETS]
-X_all_sc = scaler.fit_transform(X_all)
-models_final = train_models(X_all_sc, y_all)
+## Phase 3 : Hydrologie avancée (bassin versant)
 
-# Prédire submission
-X_sub = select_model_features(df_submission)
-X_sub_sc = scaler.transform(X_sub)
-predictions = predict(models_final, X_sub_sc)
+### 3.1 Délinéation du bassin versant
+- [ ] Télécharger DEM haute résolution (SRTM / HydroSHEDS)
+- [ ] Installer PySheds ou WhiteboxTools
+- [ ] Pour chaque point de mesure :
+  - [ ] Délinéer le bassin amont
+  - [ ] Calculer la surface drainée
+  - [ ] Calculer la pente moyenne du bassin
+  - [ ] Calculer l'ordre de Strahler
+  - [ ] Calculer la distance au cours d'eau principal
 
-# Sauvegarder
-predictions.to_csv('outputs/submissions/submission.csv', index=False)
-```
+### 3.2 Occupation du sol sur le bassin versant
+- [ ] Recalculer ESA WorldCover sur le bassin (pas le buffer)
+- [ ] % agriculture dans le bassin amont
+- [ ] % zones urbaines dans le bassin amont
+- [ ] % zones minières (si disponible)
 
-## Checklist avant soumission
+### 3.3 Géologie / lithologie
+- [ ] Trouver source de données géologiques Afrique du Sud
+- [ ] Extraire :
+  - [ ] Type dominant dans le bassin
+  - [ ] % calcaire
+  - [ ] % roches mafiques
 
-- [ ] Learning curves OK (pas d'overfitting majeur)
-- [ ] Validation spatiale testée
-- [ ] Performances sur test set notées
-- [ ] Pipeline appliqué au submission
-- [ ] Fichier submission.csv généré
-- [ ] Format vérifié (colonnes, ordre)
+---
+
+## Phase 4 : Modélisation avancée
+
+### 4.1 Séparer rivière / plan d'eau
+- [x] Classification disponible (`water_type`)
+- [ ] Option A : Deux modèles séparés
+- [ ] Option B : Un modèle avec variable d'interaction
+- [ ] Comparer les performances
+
+### 4.2 Modèle par variable cible
+
+| Variable | Drivers principaux | Approche |
+|----------|-------------------|----------|
+| **Alcalinité** | Sols + géologie | Modèle physique + ML sur résidus |
+| **Conductivité** | Hydrologie + climat + sols | XGBoost avec toutes features |
+| **Phosphore** | Pluie récente + occupation sol + satellite | Focus sur cumul pluie + agriculture |
+
+### 4.3 Améliorer le modèle ML
+- [ ] Tester XGBoost / LightGBM
+- [ ] Log-transform si distribution asymétrique
+- [ ] Validation croisée spatiale (GroupKFold par site/bassin)
+- [ ] Stacking de modèles
+
+---
+
+## Phase 5 : Vérifications finales
+
+### 5.1 Anti-pièges
+- [ ] Pas de fuite temporelle (variable calculée après la date)
+- [ ] Pas de fuite spatiale (même site dans train et test)
+- [ ] Performance séparée par :
+  - [ ] Type de milieu (rivière vs plan d'eau)
+  - [ ] Variable chimique
+  - [ ] Saison
+
+### 5.2 Soumission finale
+- [ ] Sélectionner le meilleur modèle
+- [ ] Réentraîner sur tout le training set
+- [ ] Appliquer le pipeline au submission
+- [ ] Vérifier le format du fichier
+- [ ] Générer `submission.csv`
+
+---
+
+## Résumé des priorités
+
+| Priorité | Tâche | Impact estimé | Statut |
+|----------|-------|---------------|--------|
+| ✅ 1 | Type de milieu (rivière/plan d'eau) | Élevé | **FAIT** |
+| ✅ 2 | Agrégations temporelles climat | Élevé | **FAIT** |
+| ✅ 3 | Buffer + stats Landsat | Moyen | **FAIT** |
+| ✅ 4 | ESA WorldCover | Moyen | **FAIT** |
+| ✅ 5 | SoilGrids (pH, argiles) | Moyen | **FAIT** |
+| ✅ 6 | DEM simple (altitude, pente) | Moyen | **FAIT** |
+| 🟡 7 | Bassin versant | Élevé | Complexe |
+| 🟡 8 | Géologie | Moyen | Complexe |
+| 🟢 9 | XGBoost / LightGBM | Moyen | À faire |
+| 🟢 10 | Modèle par variable | Moyen | À faire |
+
+---
+
+## Notebooks créés/modifiés
+
+| Notebook | Statut | Description |
+|----------|--------|-------------|
+| `05_TERRACLIMATE_DATA_EXTRACTION_V2.ipynb` | ✅ Exécuté | Avec lags et cumuls mensuels |
+| `06_LANDSAT_DATA_EXTRACTION_V2.ipynb` | ✅ Exécuté | Avec buffer 200m + stats |
+| `08_ESA_WORLDCOVER_EXTRACTION.ipynb` | ✅ Exécuté | Occupation du sol |
+| `09_WATER_TYPE_CLASSIFICATION.ipynb` | ✅ Exécuté | Lac vs rivière (HydroSHEDS) |
+| `10_SOILGRIDS_EXTRACTION.ipynb` | ✅ Exécuté | Propriétés du sol (API ISRIC) |
+| `11_DEM_EXTRACTION.ipynb` | ✅ Exécuté | Topographie (Copernicus DEM) |
+
+---
+
+## Prochaines actions immédiates
+
+### Extractions terminées ✅
+1. ~~**Exécuter** `08_ESA_WORLDCOVER_EXTRACTION.ipynb`~~ ✅ FAIT
+2. ~~**Exécuter** `10_SOILGRIDS_EXTRACTION.ipynb`~~ ✅ FAIT
+3. ~~**Créer et exécuter** `11_DEM_EXTRACTION.ipynb`~~ ✅ FAIT
+4. ~~**Exécuter** `05_TERRACLIMATE_DATA_EXTRACTION_V2.ipynb`~~ ✅ FAIT
+5. ~~**Exécuter** `06_LANDSAT_DATA_EXTRACTION_V2.ipynb`~~ ✅ FAIT
+
+### Prochaines étapes
+1. **Fusionner** tous les CSV en un seul dataset
+2. **Réentraîner** le modèle avec toutes les nouvelles features
+3. **Comparer** R² avant (~0.41) vs après
+4. **Tester** XGBoost / LightGBM

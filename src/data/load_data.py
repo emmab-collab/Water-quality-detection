@@ -25,7 +25,7 @@ def load_water_quality(filepath):
     """
     df = pd.read_csv(filepath)
     df['Sample Date'] = pd.to_datetime(df['Sample Date'], dayfirst=True, errors='coerce')
-    print(f"[OK] Water quality: {len(df)} lignes")
+    print(f"Water quality: {len(df)} lignes, {len(df.columns)} colonnes")
     return df
 
 
@@ -51,7 +51,7 @@ def load_landsat(filepath):
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors='coerce')
 
-    print(f"[OK] Landsat: {len(df)} lignes, {len(df.columns)} colonnes")
+    print(f"Landsat: {len(df)} lignes, {len(df.columns)} colonnes")
     return df
 
 
@@ -68,7 +68,7 @@ def load_terraclimate(filepath):
     if 'Sample Date' in df.columns:
         df['Sample Date'] = pd.to_datetime(df['Sample Date'], dayfirst=True, errors='coerce')
 
-    print(f"[OK] TerraClimate: {len(df)} lignes")
+    print(f"TerraClimate: {len(df)} lignes, {len(df.columns)} colonnes")
     return df
 
 
@@ -102,7 +102,7 @@ def merge_all_data(water_quality_df, landsat_df, terraclimate_df):
         how='inner'
     )
 
-    print(f"[OK] Données fusionnées: {len(df)} lignes, {len(df.columns)} colonnes")
+    print(f"Données fusionnées: {len(df)} lignes, {len(df.columns)} colonnes")
     return df
 
 
@@ -298,8 +298,8 @@ def load_all(wq_path, landsat_path, terra_path, features=None, fill_na=False):
     df = merge_all_data(wq, landsat, terra)
 
     # 3. Afficher les valeurs manquantes
-    print("\nValeurs manquantes:")
-    check_missing(df)
+    #print("\nValeurs manquantes:")
+    #check_missing(df)
 
     # 4. Remplir les valeurs manquantes seulement si demandé
     if fill_na:

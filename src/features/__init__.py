@@ -3,6 +3,8 @@ from src.features.engineering import (
     # Constantes
     SATURATION_VALUE,
     CREATED_FEATURES,
+    LAG_VARIABLES,
+    LAG_FEATURES,
     SEASON_ENCODED,
     MODEL_FEATURES,
     # Nettoyage
@@ -11,6 +13,7 @@ from src.features.engineering import (
     impute_with_medians,
     # Features
     create_features,
+    add_lag_features,
     encode_season,
     select_model_features,
     # Pipelines

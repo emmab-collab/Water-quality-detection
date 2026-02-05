@@ -155,3 +155,57 @@ def plot_learning_curves(
     plt.suptitle('Learning Curves - Détection Overfitting', fontsize=12)
     plt.tight_layout()
     plt.show()
+
+
+# =============================================================================
+# HYPERPARAMETER SEARCH CURVES
+# =============================================================================
+
+def plot_hyperparameter_search(results_df: pd.DataFrame):
+    """
+    Affiche les courbes R² train/val pour chaque combinaison d'hyperparamètres.
+
+    Pour chaque target, affiche R² en fonction de max_depth,
+    avec une ligne par valeur de min_samples_leaf.
+    """
+    targets = results_df['target'].unique()
+    min_samples_leafs = sorted(results_df['min_samples_leaf'].unique())
+
+    fig, axes = plt.subplots(1, len(targets), figsize=(5 * len(targets), 4))
+    if len(targets) == 1:
+        axes = [axes]
+
+    colors = plt.cm.tab10(np.linspace(0, 1, len(min_samples_leafs)))
+
+    for i, target in enumerate(targets):
+        ax = axes[i]
+        target_data = results_df[results_df['target'] == target]
+
+        for j, min_leaf in enumerate(min_samples_leafs):
+            subset = target_data[target_data['min_samples_leaf'] == min_leaf]
+            subset = subset.sort_values('max_depth')
+
+            depths = subset['max_depth'].values
+            train_r2 = subset['train_R2'].values
+            val_r2 = subset['val_R2'].values
+
+            # Courbe train (ligne pleine)
+            ax.plot(depths, train_r2, 'o-', color=colors[j],
+                   label=f'min_leaf={min_leaf} (train)', linewidth=2)
+            # Courbe val (ligne pointillée)
+            ax.plot(depths, val_r2, 's--', color=colors[j],
+                   label=f'min_leaf={min_leaf} (val)', linewidth=2, alpha=0.7)
+
+        ax.set_xlabel('max_depth')
+        ax.set_ylabel('R²')
+        ax.set_title(target)
+        ax.grid(True, alpha=0.3)
+        ax.set_xticks(sorted(target_data['max_depth'].unique()))
+
+    # Légende commune
+    handles, labels = axes[0].get_legend_handles_labels()
+    fig.legend(handles, labels, loc='center left', bbox_to_anchor=(1.0, 0.5), fontsize=9)
+
+    plt.suptitle('R² Train vs Validation par hyperparamètres\n(lignes pleines = train, pointillées = val)', fontsize=12)
+    plt.tight_layout()
+    plt.show()

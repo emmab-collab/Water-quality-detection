@@ -50,7 +50,7 @@ LANDSAT_BANDS = ['blue', 'green', 'red', 'nir', 'swir16', 'swir22']
 LANDSAT_INDICES = ['NDVI', 'NDWI', 'NDMI', 'MNDWI']
 LANDSAT_FEATURES = LANDSAT_BANDS + LANDSAT_INDICES
 
-# Features TerraClimate disponibles (10 variables)
+# Features TerraClimate disponibles (10 variables de base)
 TERRACLIMATE_FEATURES = [
     'pet',   # Potential Evapotranspiration (évapotranspiration potentielle)
     'aet',   # Actual Evapotranspiration (évapotranspiration réelle)
@@ -63,6 +63,26 @@ TERRACLIMATE_FEATURES = [
     'vpd',   # Vapor Pressure Deficit (déficit de pression de vapeur)
     'ws',    # Wind Speed (vitesse du vent)
 ]
+
+# =============================================================================
+# FEATURES V2 - Agrégations temporelles et spatiales
+# =============================================================================
+
+# Variables TerraClimate avec agrégations temporelles (V2)
+TEMPORAL_VARS = ['ppt', 'soil', 'def', 'vpd']  # Variables avec lags et cumuls
+
+# Suffixes pour les agrégations temporelles
+TEMPORAL_SUFFIXES = ['_lag1', '_lag2', '_lag3', '_sum4', '_mean4', '_anomaly']
+
+# Features TerraClimate V2 (avec agrégations)
+TERRACLIMATE_FEATURES_V2 = TERRACLIMATE_FEATURES.copy()
+for var in TEMPORAL_VARS:
+    for suffix in TEMPORAL_SUFFIXES:
+        TERRACLIMATE_FEATURES_V2.append(f'{var}{suffix}')
+
+# Features Landsat V2 (avec écart-types du buffer)
+LANDSAT_FEATURES_V2 = LANDSAT_BANDS + [f'{b}_std' for b in LANDSAT_BANDS] + \
+                      LANDSAT_INDICES + [f'{i}_std' for i in LANDSAT_INDICES]
 
 # =============================================================================
 # NOS FEATURES (améliorées par rapport au benchmark)
@@ -97,6 +117,13 @@ ALL_FEATURES = [
 
 # Alias pour rétrocompatibilité
 BENCHMARK_FEATURES = ALL_FEATURES
+
+# =============================================================================
+# ALL_FEATURES_V2 - Toutes les features enrichies
+# =============================================================================
+
+# Toutes les features V2 (Landsat avec stats + TerraClimate avec temporel)
+ALL_FEATURES_V2 = LANDSAT_FEATURES_V2 + TERRACLIMATE_FEATURES_V2
 
 # Colonnes de localisation (ne pas utiliser comme features!)
 LOCATION_COLS = ['Latitude', 'Longitude', 'Sample Date']
