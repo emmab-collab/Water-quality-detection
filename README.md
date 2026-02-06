@@ -1,101 +1,119 @@
-# EY Challenge - Qualité de l'Eau
+# EY Challenge - Qualite de l'Eau
 
-Prédire 3 indicateurs de qualité de l'eau en Afrique du Sud.
+Predire 3 indicateurs de qualite de l'eau en Afrique du Sud a partir de donnees satellite et environnementales.
 
-## Targets
+## Targets (ce qu'on predit)
 
-| Variable | Description |
-|----------|-------------|
-| Total Alkalinity | Alcalinité (mg/L) |
-| Electrical Conductance | Conductivité (µS/cm) |
-| Dissolved Reactive Phosphorus | Phosphore (µg/L) |
+| Variable | Unite | Description |
+|----------|-------|-------------|
+| Total Alkalinity | mg/L CaCO3 | Capacite tampon de l'eau |
+| Electrical Conductance | uS/cm | Concentration en mineraux dissous |
+| Dissolved Reactive Phosphorus | ug/L | Phosphore biodisponible |
 
-## Structure
+## Structure du projet
 
 ```
-├── notebooks/
-│   ├── 01_EDA.ipynb                 # Explorer les données
-│   ├── 02_Feature_Engineering.ipynb # Nettoyer + créer features
-│   └── 03_Modeling.ipynb            # Entraîner + évaluer
-│
-├── src/
-│   ├── config.py          # Constantes (TARGETS, FEATURES)
-│   ├── paths.py           # Chemins fichiers
-│   ├── data/
-│   │   └── load_data.py   # Charger les données
-│   ├── features/
-│   │   └── engineering.py # Nettoyage + features
-│   ├── models/
-│   │   └── train.py       # Split + train + evaluate
-│   └── visualization/
-│       └── plots.py       # Graphiques
-│
-├── data/
-│   ├── raw/               # Données brutes
-│   └── processed/         # Données Landsat/TerraClimate extraites
-│
-└── docs/
-    └── next_steps.md      # Prochaines étapes
+PROJET EY/
+|
+|-- data/
+|   |-- raw/                    # Donnees brutes (training, submission template)
+|   |-- processed/              # Features extraites et fusionnees
+|   |   |-- merged_training.csv     # FINAL: 9319 samples, 79 features
+|   |   |-- merged_validation.csv   # FINAL: 200 samples pour soumission
+|   |   +-- gemstat_features.csv    # Donnees externes (1415 samples)
+|   +-- submissions/            # Fichiers de soumission
+|
+|-- notebooks/                  # Extraction des features (Google Earth Engine)
+|   |-- 00_GETTING_STARTED.ipynb    # Reference du challenge
+|   |-- 01_LANDSAT_EXTRACTION.ipynb # Bandes spectrales + indices
+|   |-- 02_TERRACLIMATE_EXTRACTION.ipynb # Climat (34 features)
+|   |-- 03_WORLDCOVER_EXTRACTION.ipynb   # Occupation du sol (8 classes)
+|   |-- 04_SOILGRIDS_EXTRACTION.ipynb    # Proprietes du sol (6 features)
+|   |-- 05_DEM_EXTRACTION.ipynb          # Elevation, pente, aspect
+|   |-- 06_DATA_FUSION.ipynb             # Fusion de toutes les features
+|   |-- 07_GEMSTAT_PREPARATION.ipynb     # Preparation donnees externes
+|   +-- 08_GEMSTAT_FEATURES.ipynb        # Extraction features GEMStat
+|
+|-- scripts/                    # Scripts d'entrainement et soumission
+|   |-- train_common_features.py    # Entrainement sur 51 features communes
+|   |-- train_combined.py           # Analyse Training vs GEMStat
+|   +-- generate_submission.py      # Generation du fichier de soumission
+|
+|-- src/                        # Code reutilisable
+|   |-- config.py               # TARGETS, FEATURES, constantes
+|   |-- models/train.py         # split_data, normalize, train_models, evaluate
+|   +-- features/engineering.py # Fonctions de feature engineering
+|
++-- docs/                       # Documentation
 ```
 
-## Pipeline
+## Donnees disponibles
 
-### 1. Feature Engineering (notebook 02)
+### Features (79 au total dans merged_training.csv)
 
-```python
-from src.features import prepare_training, prepare_submission
+| Source | Nb | Features |
+|--------|---:|----------|
+| Landsat | 22 | Bandes (blue, green, red, nir, swir16, swir22) + indices (NDVI, NDWI, NDMI, MNDWI) + std |
+| TerraClimate | 34 | pet, aet, ppt, tmax, tmin, soil, def, pdsi, vpd, ws + lags + anomalies |
+| WorldCover | 8 | lc_tree, lc_shrubland, lc_grassland, lc_cropland, lc_builtup, lc_bare, lc_water, lc_wetland |
+| SoilGrids | 6 | soil_ph, soil_clay, soil_sand, soil_soc, soil_cec, soil_nitrogen |
+| DEM | 3 | elevation, slope, aspect |
+| Autres | 2 | water_type, distance_to_river |
+| Meta | 3 | Latitude, Longitude, Sample Date |
 
-df_train, medians = prepare_training(df_raw)      # Nettoie + crée features
-df_sub = prepare_submission(df_sub_raw, medians)  # Impute + crée features
-```
+### GEMStat (donnees externes)
 
-**Ce que fait `prepare_training` :**
-1. Supprime les lignes avec NaN
-2. Supprime les valeurs saturées (65535)
-3. Calcule les médianes (pour imputer submission)
-4. Crée `day_of_year`, `season`, `nir_green_ratio`, `swir_ratio`
-5. One-hot encode `season`
+- 1415 echantillons de l'Eastern Cape
+- 51 features communes (pas de Landsat, water_type, distance_to_river)
+- **Attention**: DRP etait en mg/L, converti en ug/L (x1000)
 
-### 2. Modeling (notebook 03)
+## Workflow actuel
 
-```python
-from src.features import select_model_features
-from src.models import split_data, normalize, train_models, evaluate
+### 1. Extraction des features (deja fait)
 
-X = select_model_features(df_train)
-y = df_train[TARGETS]
+Les notebooks 01-06 extraient les features depuis Google Earth Engine.
+**Resultat**: `merged_training.csv` et `merged_validation.csv`
 
-X_train, X_val, X_test, y_train, y_val, y_test = split_data(X, y)
-X_train_sc, X_val_sc, X_test_sc, scaler = normalize(X_train, X_val, X_test)
-models = train_models(X_train_sc, y_train)
-results = evaluate(models, X_test_sc, y_test)
-```
-
-## Features utilisées (23)
-
-| Type | Features |
-|------|----------|
-| Landsat bandes (6) | blue, green, red, nir, swir16, swir22 |
-| Landsat indices (4) | NDVI, NDWI, NDMI, MNDWI |
-| TerraClimate (10) | pet, aet, ppt, tmax, tmin, soil, def, pdsi, vpd, ws |
-| Créées (3) | day_of_year, nir_green_ratio, swir_ratio |
-| Season encodé (3) | season_spring, season_summer, season_winter |
-
-## Métriques
-
-| Métrique | Interprétation |
-|----------|----------------|
-| R² | 1 = parfait, 0 = nul |
-| RMSE | Plus petit = meilleur |
-
-## Commandes
+### 2. Entrainement
 
 ```bash
-# Installer
-pip install -r requirements.txt
+# Option 1: Sur les 51 features communes (sans Landsat)
+python scripts/train_common_features.py
 
-# Exécuter les notebooks dans l'ordre
-1. 01_EDA.ipynb
-2. 02_Feature_Engineering.ipynb
-3. 03_Modeling.ipynb
+# Option 2: Analyse comparative Training vs GEMStat
+python scripts/train_combined.py
 ```
+
+### 3. Soumission
+
+```bash
+python scripts/generate_submission.py
+# -> data/submissions/submission_common_features.csv
+```
+
+## Resultats actuels
+
+| Dataset | Total Alkalinity | Electrical Conductance | DRP |
+|---------|-----------------|----------------------|-----|
+| CV Training (R2) | 0.82 | 0.86 | 0.67 |
+| CV Combine (R2) | 0.83 | 0.85 | 0.51 |
+| Train->GEMStat (R2) | -0.54 | -0.30 | -0.12 |
+
+**Probleme**: Domain shift entre Training et GEMStat - les modeles ne generalisent pas.
+
+## Prochaines etapes
+
+1. [ ] Extraire Landsat + distance_to_river pour GEMStat
+2. [ ] Tester d'autres modeles (XGBoost, LightGBM)
+3. [ ] Reduire l'overfitting (regularisation, moins de features)
+4. [ ] Domain adaptation techniques
+
+## Installation
+
+```bash
+pip install -r requirements.txt
+```
+
+## Fichiers archives
+
+Les anciens notebooks et scripts sont dans `notebooks/_archive/` et `scripts/_archive/`.
